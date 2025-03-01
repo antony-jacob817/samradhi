@@ -11,7 +11,6 @@ const categories = [
 
 const featuredProducts = [
     {
-    user_id: 'user1',
     id: '1',
     name: 'Organic Tomato Seeds',
     description: 'High-yield, disease-resistant tomato seeds perfect for home gardens',
@@ -23,7 +22,6 @@ const featuredProducts = [
     officeId: 'kb1'
   },
   {
-    user_id: 'user2',
     id: '2',
     name: 'Mango Saplings',
     description: 'Alphonso mango variety, grafted saplings ready for planting',

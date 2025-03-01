@@ -29,15 +29,9 @@ export const SellerDashboard = () => {
   const [processingBookingId, setProcessingBookingId] = useState<string | null>(null);
 
   // Fetch products from MongoDB when the component mounts
-  const fetchProducts = async () => {
-    const userId = localStorage.getItem('user_id');
-    if (!userId) {
-      console.error('User ID not found');
-      return;
-    }
-  
+  const fetchProducts = async () => {  
     try {
-      const response = await fetch(`http://localhost:5000/products?user_id=${userId}`);
+      const response = await fetch(`http://localhost:5000/products`);
       if (!response.ok) throw new Error('Failed to fetch products');
   
       const data = await response.json();
@@ -64,21 +58,13 @@ export const SellerDashboard = () => {
   const handleAddOrUpdateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
   
-    const userId = localStorage.getItem('user_id');
-    if (!userId) {
-      console.error('User ID not found');
-      return;
-    }
-  
     try {
-      let response;
-      const productData = { ...formData, user_id: userId };
-  
+      let response;  
       if (selectedProduct) {
         response = await fetch(`http://localhost:5000/products/${selectedProduct.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(productData),
+          body: JSON.stringify(formData),
         });
   
         if (!response.ok) throw new Error('Failed to update product');
@@ -86,7 +72,7 @@ export const SellerDashboard = () => {
         response = await fetch('http://localhost:5000/products', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(productData),
+          body: JSON.stringify(formData),
         });
   
         if (!response.ok) throw new Error('Failed to add product');
@@ -127,14 +113,8 @@ export const SellerDashboard = () => {
   };
 
   const handleDeleteProduct = async (productId: string) => {
-    try {
-      const userId = localStorage.getItem('user_id');
-      if (!userId) {
-        console.error('User ID not found');
-        return;
-      }
-  
-      const response = await fetch(`http://localhost:5000/products/${productId}?user_id=${userId}`, {
+    try {  
+      const response = await fetch(`http://localhost:5000/products/${productId}`, {
         method: 'DELETE',
       });
   
