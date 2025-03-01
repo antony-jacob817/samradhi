@@ -45,6 +45,7 @@ export const useAuthStore = create<AuthState & {
           
           set({ user, isAuthenticated: true, isLoading: false });
         } catch (error) {
+          console.error("❌ Error: ", error);
           set({ error: 'Invalid credentials', isLoading: false });
         }
       },
@@ -65,6 +66,7 @@ export const useAuthStore = create<AuthState & {
           
           set({ user, isAuthenticated: true, isLoading: false });
         } catch (error) {
+          console.error("❌ Error: ", error);
           set({ error: 'Registration failed. Please try again.', isLoading: false });
         }
       },

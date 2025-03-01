@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { Home } from './pages/Home';
@@ -10,6 +9,7 @@ import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Profile } from './pages/Profile';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import ProductDetails from './pages/ProductDetails';
 
 function App() {
   return (
@@ -20,6 +20,8 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/products" element={<Products />} />
+            <Route path="/products/:id" element={<ProductDetails />} />
+            <Route path="/product/:id" element={<ProductDetails />} />
             <Route path="/offices" element={<Offices />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -34,7 +36,7 @@ function App() {
             <Route
               path="/seller"
               element={
-                <ProtectedRoute allowedRoles={['seller']}>
+                <ProtectedRoute allowedRoles={["seller"]}>
                   <SellerDashboard />
                 </ProtectedRoute>
               }

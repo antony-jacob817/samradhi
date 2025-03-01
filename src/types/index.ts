@@ -3,8 +3,9 @@ export interface Product {
   name: string;
   description: string;
   price: number;
-  category: 'seeds' | 'saplings' | 'pesticides' | 'fertilizers';
+  category: 'Seeds' | 'Saplings' | 'Pesticides' | 'Fertilizers';
   imageUrl: string;
+  krishiBhavan: 'Krishi Bahavan 1' | 'Krishi Bahavan 2';
   stock: number;
   officeId: string;
 }

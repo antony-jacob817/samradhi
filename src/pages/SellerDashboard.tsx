@@ -1,52 +1,7 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, Package, TrendingUp, Users, AlertCircle, CheckCircle, Clock, Search } from 'lucide-react';
 import type { Product, Booking } from '../types';
 import { format } from 'date-fns';
-
-const mockProducts = [
-  {
-    id: '1',
-    name: 'Organic Tomato Seeds',
-    description: 'High-yield, disease-resistant tomato seeds perfect for home gardens',
-    price: 45,
-    category: 'seeds' as 'seeds',
-    imageUrl: 'https://images.unsplash.com/photo-1592921870789-04563d55041c?auto=format&fit=crop&q=80&w=500',
-    stock: 100,
-    officeId: 'kb1'
-  },
-  {
-    id: '2',
-    name: 'Mango Saplings',
-    description: 'Alphonso mango variety, grafted saplings ready for planting',
-    price: 120,
-    category: 'saplings' as 'saplings',
-    imageUrl: 'https://images.unsplash.com/photo-1621955964441-c173e01c135b?auto=format&fit=crop&q=80&w=500',
-    stock: 50,
-    officeId: 'kb1'
-  }
-];
-
-const mockBookings: Booking[] = [
-  {
-    id: '1',
-    productId: '1',
-    userId: '1',
-    officeId: 'kb1',
-    quantity: 2,
-    status: 'pending',
-    bookingDate: new Date(),
-    expiryDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    product: mockProducts[0],
-    office: {
-      id: 'kb1',
-      name: 'Krishi Bahavan - Central Office',
-      location: 'Thiruvananthapuram',
-      address: '123 Agriculture Road, Kerala 695001',
-      contact: '+91 1234567890'
-    },
-    totalAmount: 90
-  }
-];
 
 const stats = [
   { name: 'Total Products', value: '24', icon: Package, color: 'bg-blue-500' },
@@ -56,26 +11,147 @@ const stats = [
 ];
 
 export const SellerDashboard = () => {
-  const [products] = useState<Product[]>(mockProducts);
-  const [bookings] = useState<Booking[]>(mockBookings);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [formData, setFormData] = useState<Pick<Product, 'name' | 'description' | 'price' | 'stock' | 'category' | 'krishiBhavan' | 'imageUrl'>>({
+    name: '',
+    description: '',
+    price: 0,
+    stock: 0,
+    category: 'Seeds',
+    krishiBhavan: 'Krishi Bahavan 1',
+    imageUrl: ''
+  });
+  const [bookings] = useState<Booking[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [activeTab, setActiveTab] = useState<'products' | 'collections'>('collections');
   const [searchTerm, setSearchTerm] = useState('');
   const [processingBookingId, setProcessingBookingId] = useState<string | null>(null);
 
+  // Fetch products from MongoDB when the component mounts
+  const fetchProducts = async () => {
+    const userId = localStorage.getItem('user_id');
+    if (!userId) {
+      console.error('User ID not found');
+      return;
+    }
+  
+    try {
+      const response = await fetch(`http://localhost:5000/products?user_id=${userId}`);
+      if (!response.ok) throw new Error('Failed to fetch products');
+  
+      const data = await response.json();
+      setProducts(data);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
+  };
+  
+  // Fetch products on mount
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+      
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === 'price' || name === 'stock' ? Number(value) : value
+    }));
+  };
+
+  const handleAddOrUpdateProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+  
+    const userId = localStorage.getItem('user_id');
+    if (!userId) {
+      console.error('User ID not found');
+      return;
+    }
+  
+    try {
+      let response;
+      const productData = { ...formData, user_id: userId };
+  
+      if (selectedProduct) {
+        response = await fetch(`http://localhost:5000/products/${selectedProduct.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(productData),
+        });
+  
+        if (!response.ok) throw new Error('Failed to update product');
+      } else {
+        response = await fetch('http://localhost:5000/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(productData),
+        });
+  
+        if (!response.ok) throw new Error('Failed to add product');
+      }
+  
+      // ✅ Fetch latest products from backend
+      await fetchProducts(); 
+  
+      setShowAddModal(false);
+      setSelectedProduct(null);
+      setFormData({
+        name: '',
+        description: '',
+        price: 0,
+        stock: 0,
+        category: 'Seeds',
+        krishiBhavan: 'Krishi Bahavan 1',
+        imageUrl: '',
+      });
+    } catch (error) {
+      console.error('Error adding/updating product:', error);
+    }
+  };
+  
+
   const handleEdit = (product: Product) => {
     setSelectedProduct(product);
+    setFormData({
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      stock: product.stock,
+      category: product.category,
+      krishiBhavan: product.krishiBhavan,
+      imageUrl: product.imageUrl
+    });
     setShowAddModal(true);
   };
+
+  const handleDeleteProduct = async (productId: string) => {
+    try {
+      const userId = localStorage.getItem('user_id');
+      if (!userId) {
+        console.error('User ID not found');
+        return;
+      }
+  
+      const response = await fetch(`http://localhost:5000/products/${productId}?user_id=${userId}`, {
+        method: 'DELETE',
+      });
+  
+      if (!response.ok) throw new Error('Failed to delete product');
+  
+      setProducts((prev) => prev.filter((p) => p.id !== productId));
+      console.log('Product deleted successfully');
+    } catch (error) {
+      console.error('Error deleting product:', error);
+    }
+  };  
 
   const handleCompleteCollection = async (bookingId: string) => {
     setProcessingBookingId(bookingId);
     try {
       // Mock API call - replace with actual update
       await new Promise(resolve => setTimeout(resolve, 1000));
-      // Update booking status to collected
-      // In a real app, this would be handled by the backend
     } catch (error) {
       console.error('Failed to complete collection:', error);
     } finally {
@@ -84,8 +160,8 @@ export const SellerDashboard = () => {
   };
 
   const filteredBookings = bookings.filter(booking => 
-    booking.product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    booking.id.toLowerCase().includes(searchTerm.toLowerCase())
+    booking?.product?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    booking?.id?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -96,8 +172,7 @@ export const SellerDashboard = () => {
           <p className="text-gray-600">Manage your products and track bookings</p>
         </div>
         {activeTab === 'products' && (
-          <button
-            onClick={() => setShowAddModal(true)}
+          <button onClick={() => setShowAddModal(true)}
             className="bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-green-800 transition-colors"
           >
             <Plus className="h-5 w-5" />
@@ -263,6 +338,7 @@ export const SellerDashboard = () => {
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Krishi Bhavan</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -290,6 +366,11 @@ export const SellerDashboard = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4">
+                        <span className="px-2 py-1 rounded-full text-sm bg-gray-100 text-gray-800">
+                          {product.krishiBhavan}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
                         <span className="font-medium text-gray-800">₹{product.price}</span>
                       </td>
                       <td className="px-6 py-4">
@@ -301,13 +382,12 @@ export const SellerDashboard = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-3">
-                          <button
-                            onClick={() => handleEdit(product)}
+                          <button onClick={() => handleEdit(product)}
                             className="text-blue-600 hover:text-blue-800"
                           >
                             <Pencil className="h-5 w-5" />
                           </button>
-                          <button className="text-red-600 hover:text-red-800">
+                          <button onClick={() => handleDeleteProduct(product.id)} className="text-red-600 hover:text-red-800">
                             <Trash2 className="h-5 w-5" />
                           </button>
                         </div>
@@ -328,14 +408,15 @@ export const SellerDashboard = () => {
             <h2 className="text-xl font-semibold text-gray-800 mb-4">
               {selectedProduct ? 'Edit Product' : 'Add New Product'}
             </h2>
-            <form className="space-y-4">
+            <form onSubmit={handleAddOrUpdateProduct} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Product Name
                 </label>
                 <input
-                  type="text"
-                  defaultValue={selectedProduct?.name}
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
@@ -344,7 +425,9 @@ export const SellerDashboard = () => {
                   Description
                 </label>
                 <textarea
-                  defaultValue={selectedProduct?.description}
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   rows={3}
                 />
@@ -356,7 +439,9 @@ export const SellerDashboard = () => {
                   </label>
                   <input
                     type="number"
-                    defaultValue={selectedProduct?.price}
+                    name="price"
+                    value={formData.price || ""}
+                    onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
@@ -366,23 +451,41 @@ export const SellerDashboard = () => {
                   </label>
                   <input
                     type="number"
-                    defaultValue={selectedProduct?.stock}
+                    name="stock"
+                    value={formData.stock || ""}
+                    onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Krishi Bhavan
+                </label>
+                <select
+                  name="krishiBhavan"
+                  value={formData.krishiBhavan}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="Krishi Bhavan 1">Krishi Bhavan 1</option>
+                  <option value="Krishi Bhavan 2">Krishi Bhavan 2</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Category
                 </label>
                 <select
-                  defaultValue={selectedProduct?.category}
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
-                  <option value="seeds">Seeds</option>
-                  <option value="saplings">Saplings</option>
-                  <option value="pesticides">Pesticides</option>
-                  <option value="fertilizers">Fertilizers</option>
+                  <option value="Seeds">Seeds</option>
+                  <option value="Saplings">Saplings</option>
+                  <option value="Pesticides">Pesticides</option>
+                  <option value="Fertilizers">Fertilizers</option>
                 </select>
               </div>
               <div>
@@ -390,8 +493,9 @@ export const SellerDashboard = () => {
                   Image URL
                 </label>
                 <input
-                  type="text"
-                  defaultValue={selectedProduct?.imageUrl}
+                  name="imageUrl"
+                  value={formData.imageUrl}
+                  onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
@@ -416,7 +520,8 @@ export const SellerDashboard = () => {
             </form>
           </div>
         </div>
-      )}
+)}
+
     </div>
   );
 };
